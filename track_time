@@ -18,8 +18,12 @@ def main():
 
     for line in stdout.split("\n"):
         line = str(line).lower()
-        if "date" in line:
+        if "date: " in line:
             split = line.split()
+            if len(split) < 4:
+                print(f"Error in line: {line}")
+                print(split)
+                continue
             time = split[-2].strip()
             date = split[-3].strip()
             parsed = datetime.strptime(date + "T" + time, "%Y-%m-%dT%H:%M:%S")
@@ -42,31 +46,24 @@ def main():
 
     hour = 60 * 60
     prev = 0
-    interval_starts = []
-    interval_ends = []
     interval = False
     n = len(dts)
-    for i, dt in enumerate(dts):
-        if i == 0:
-            prev = dt
-        if i == n - 1:
-            interval_ends.append(dt)
-            break
-        if not interval:
-            interval_starts.append(dt)
-        diff = dt - prev
-        if diff < hour:
-            interval = True
-        elif prev != 0:
-            interval_ends.append(dt)
-            interval = False
-        if prev == 0:
-            prev = dt
-        if not interval:
-            prev = dt
-
-    intervals = list(zip(interval_starts, interval_ends))
-    intervals = [(end - start) / hour for (start, end) in intervals]
-    print(intervals)
+    zones = [[]]
+    for i in range(n):
+        dt = dts[i]
+        if len(zones[-1]) == 0:
+            zones[-1].append(dt)
+            continue
+        diff = dt - zones[-1][-1]
+        if diff < hour or i == n - 1:
+            zones[-1].append(dt)
+        else:
+            zones.append([dt])
+    intervals = [(round(zone[0], 0), round(zone[-1], 0), round((zone[-1] - zone[0]) / hour, 2)) for zone in zones]
+    total = sum(map(lambda p: p[-1], intervals))
+    print("start,end,hours")
+    intervals = [f"{datetime.fromtimestamp(start)},{datetime.fromtimestamp(end)},{t}" for (start, end, t) in intervals]
+    print("\n".join(intervals))
+    print(f"-,-,{total}\n")
 
 main()
