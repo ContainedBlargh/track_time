@@ -1,0 +1,72 @@
+#!/usr/bin/python3
+
+from os import walk
+from os.path import join as pjoin, getmtime as mtime, getctime as ctime
+from subprocess import run
+from shlex import split as sh_split
+from datetime import datetime
+
+def main():
+    git_dts = []
+    git_log = run(sh_split('bash -c "git log --date=iso"'), capture_output=True, text=True)
+    stdout, stderr = (git_log.stdout, git_log.stderr)
+
+    # if stderr is not None or stdout is None:
+    #     print("err??")
+    #     print(stderr)
+    #     return
+
+    for line in stdout.split("\n"):
+        line = str(line).lower()
+        if "date" in line:
+            split = line.split()
+            time = split[-2].strip()
+            date = split[-3].strip()
+            parsed = datetime.strptime(date + "T" + time, "%Y-%m-%dT%H:%M:%S")
+            git_dts.append(parsed.timestamp())
+
+    os_dts = []
+
+    def find_all_files(dirpath: str = "./"):
+        acc = []
+        for dirpath, dirnames, filenames in walk(dirpath):
+            acc += [pjoin(dirpath, file) for file in filenames]
+        return acc
+
+    all_files = find_all_files()
+    for file in all_files:
+        os_dts.append(ctime(file))
+        os_dts.append(mtime(file))
+
+    dts = list(sorted(git_dts + os_dts))
+
+    hour = 60 * 60
+    prev = 0
+    interval_starts = []
+    interval_ends = []
+    interval = False
+    n = len(dts)
+    for i, dt in enumerate(dts):
+        if i == 0:
+            prev = dt
+        if i == n - 1:
+            interval_ends.append(dt)
+            break
+        if not interval:
+            interval_starts.append(dt)
+        diff = dt - prev
+        if diff < hour:
+            interval = True
+        elif prev != 0:
+            interval_ends.append(dt)
+            interval = False
+        if prev == 0:
+            prev = dt
+        if not interval:
+            prev = dt
+
+    intervals = list(zip(interval_starts, interval_ends))
+    intervals = [(end - start) / hour for (start, end) in intervals]
+    print(intervals)
+
+main()
