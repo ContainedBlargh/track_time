@@ -6,3 +6,5 @@ It's a simple python scrip that is heavily inspired by [`git-hours`](https://git
 
 Unfortunately, I could never get `git-hours` to work on my setup, I decided to implement it myself.
 I've also taken filesystem's creation date and last modified date for each file into account.
+
+In the end, this tool is not enough for automatic time-tracking, sadly.
